@@ -1,6 +1,16 @@
 import csv
 from datetime import datetime, timedelta
-import os
+from pathlib import Path
+
+RECORDINGS_DIR = Path("recordings")
+
+# Importar librerías de audio (opcionales)
+try:
+    import sounddevice as sd
+    import soundfile as sf
+    HAVE_AUDIO = True
+except Exception:
+    HAVE_AUDIO = False
 
 CSV_FILE = 'canciones.csv'
 
@@ -81,17 +91,105 @@ def agregar_cancion():
     canciones.append(nueva)
     guardar_canciones(canciones)
     print("✅ Canción agregada al sistema de repaso.")
+def slugify(nombre):
+    return "".join(ch.lower() if ch.isalnum() else "-" for ch in nombre).strip("-")
+
+def elegir_cancion(prompt="Elegí una canción (número): "):
+    canciones = leer_canciones()
+    if not canciones:
+        print("🚫 No hay canciones.")
+        return None, None
+    listar_canciones(canciones)
+    idx = input(prompt).strip()
+    try:
+        i = int(idx) - 1
+        if i < 0 or i >= len(canciones):
+            raise ValueError
+    except Exception:
+        print("❌ Índice inválido.")
+        return None, None
+    return canciones, i
+def grabar_practica():
+    canciones, i = elegir_cancion("N° de canción a grabar (Enter=cancelar): ")
+    if canciones is None:
+        return
+    segundos = input("⏺️ ¿Cuántos segundos querés grabar? (por defecto 30): ").strip()
+    segundos = int(segundos) if segundos.isdigit() else 30
+
+    if not HAVE_AUDIO:
+        print("❌ Función de audio no disponible. Instalá dependencias:\n"
+              "   pip install sounddevice soundfile")
+        return
+
+    nombre = canciones[i]['nombre']
+    carpeta = RECORDINGS_DIR / slugify(nombre)
+    carpeta.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    archivo = carpeta / f"{ts}.wav"
+def reproducir_practica():
+    if not HAVE_AUDIO:
+        print("❌ Reproducción no disponible. Instalá dependencias:\n"
+              "   pip install sounddevice soundfile")
+        return
+    canciones, i = elegir_cancion("N° de canción para reproducir (Enter=cancelar): ")
+    if canciones is None:
+        return
+    nombre = canciones[i]['nombre']
+    carpeta = RECORDINGS_DIR / slugify(nombre)
+    if not carpeta.exists():
+        print("🚫 No hay grabaciones para esta canción.")
+        return
+    archivos = sorted([p for p in carpeta.glob("*.wav")])
+    if not archivos:
+        print("🚫 No hay grabaciones .wav.")
+        return
+    print("\n🎧 Grabaciones disponibles:")
+    for idx, p in enumerate(archivos, 1):
+        print(f"{idx}. {p.name}")
+    sel = input("N° a reproducir (Enter=cancelar): ").strip()
+    if not sel:
+        print("↩️ Cancelado.")
+        return
+    try:
+        j = int(sel) - 1
+        if j < 0 or j >= len(archivos):
+            raise ValueError
+    except Exception:
+        print("❌ Índice inválido.")
+        return
+    audio, fs = sf.read(str(archivos[j]))
+    print(f"▶️ Reproduciendo {archivos[j].name} ...")
+    sd.play(audio, fs)
+    sd.wait()
+
+    fs = 44100
+    canales = 1
+    print(f"🎙️ Grabando {segundos}s... (hablá/jugá) ")
+    audio = sd.rec(int(segundos * fs), samplerate=fs, channels=canales)
+    sd.wait()
+    sf.write(str(archivo), audio, fs)
+    print(f"✅ Guardado: {archivo}")
 
 def menu():
     print("\n🎼 SISTEMA DE REPASO DE CANCIONES DE PIANO")
     print("1. Agregar nueva canción")
     print("2. Repasar hoy")
+    print("3. Borrar canción")
+    print("4. Grabar práctica (audio)")       # <-- NUEVO
+    print("5. Reproducir práctica (audio)")   # <-- NUEVO
     opcion = input("Seleccioná una opción: ")
     if opcion == '1':
         agregar_cancion()
     elif opcion == '2':
         repasar_hoy()
+    elif opcion == '3':
+        eliminar_cancion()
+    elif opcion == '4':
+        grabar_practica()
+    elif opcion == '5':
+        reproducir_practica()
     else:
         print("❌ Opción inválida.")
+
 
 menu()
