@@ -21,6 +21,34 @@ def guardar_canciones(canciones):
         writer.writeheader()
         for c in canciones:
             writer.writerow(c)
+def listar_canciones(canciones):
+    if not canciones:
+        print("🚫 No hay canciones.")
+        return
+    for i, c in enumerate(canciones, 1):
+        print(f"{i}. {c['nombre']} — {c['link']}")
+
+def eliminar_cancion():
+    canciones = leer_canciones()
+    if not canciones:
+        print("🚫 No hay canciones para borrar.")
+        return
+    print("\n🗂️ Canciones:")
+    listar_canciones(canciones)
+    idx = input("N° a borrar (Enter = cancelar): ").strip()
+    if not idx:
+        print("↩️ Cancelado.")
+        return
+    try:
+        i = int(idx) - 1
+        if i < 0 or i >= len(canciones):
+            raise ValueError
+    except ValueError:
+        print("❌ Índice inválido.")
+        return
+    borrada = canciones.pop(i)
+    guardar_canciones(canciones)
+    print(f"🗑️ Borrada: {borrada['nombre']}")
 
 def proxima_fecha(ultima_practica, intervalo):
     return datetime.strptime(ultima_practica, "%Y-%m-%d") + timedelta(days=int(intervalo))
@@ -86,12 +114,16 @@ def menu():
     print("\n🎼 SISTEMA DE REPASO DE CANCIONES DE PIANO")
     print("1. Agregar nueva canción")
     print("2. Repasar hoy")
+    print("3. Borrar canción")  # <-- NUEVO
     opcion = input("Seleccioná una opción: ")
     if opcion == '1':
         agregar_cancion()
     elif opcion == '2':
         repasar_hoy()
+    elif opcion == '3':            # <-- NUEVO
+        eliminar_cancion()
     else:
         print("❌ Opción inválida.")
+
 
 menu()
