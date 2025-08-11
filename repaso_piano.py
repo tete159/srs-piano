@@ -43,7 +43,8 @@ def repasar_hoy():
     for i, c in enumerate(pendientes):
         print(f"\n🎵 {i+1}. {c['nombre']}")
         print(f"🔗 Link o referencia: {c['link']}")
-        dificultad = input("¿Cómo te fue? (f = fácil, d = difícil): ").lower()
+        dificultad = input("¿Cómo te fue? (f=fácil, m=medio, d=difícil): ").lower()
+
 
         if dificultad not in ['f', 'd']:
             print("❌ Entrada inválida. Se salta esta canción.")
@@ -58,6 +59,11 @@ def repasar_hoy():
         elif dificultad == 'f':
             nuevo_intervalo = int(intervalo_actual * ease_factor * 1.3)
             nuevo_ef = ease_factor * 1.1
+        elif dificultad == 'm':
+            # Intermedio: crece menos que fácil, no resetea como difícil
+            nuevo_intervalo = max(1, int(round(intervalo_actual * ease_factor * 1.15)))
+            nuevo_ef = ease_factor * 1.02
+
 
         c['ultima_practica'] = hoy.strftime("%Y-%m-%d")
         c['intervalo_dias'] = str(max(1, nuevo_intervalo))
